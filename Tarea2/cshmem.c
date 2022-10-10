@@ -23,6 +23,14 @@ Compilar con: gcc -o cshmem cshmem.c -lrt
 #include <fcntl.h>           /* For O_* constants */
 #include <errno.h>
 
+void sig_handler(int signum){
+    // Guardar tasa medida
+    tasa_medida[contador_vueltas] = 10 * (contador_bytes - contador_bytes_antiguo); // guardo bytes por segundo
+    // Reiniciar contador_bytes y sumarle uno a contador_vueltas
+    contador_bytes_antiguo = contador_bytes;
+    contador_vueltas++;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -31,12 +39,37 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    const char *name = "/shm-elo330";  // file name
     const int SIZE = 4096;      // file size
     char *prefix = argv[1];
     int N = atoi(argv[2]);
 
     printf("prefijo: %s, N: %d\n", prefix, N);
+
+    //Memoria compartida
+    char name[100]; // file name
+    sprintf(name, "/%s_shmem", prefix);
+
+    //Semáforos
+    char nameEmpty[100];
+    char nameFull[100];
+    // Nombre para los semaforos
+    sprintf(nameEmpty, "/%s_EMPTY", prefix);
+    sprintf(nameFull, "/%s_FULL", prefix);
+
+    
+    tasa_medida = (int *)malloc(10*N*sizeof(char));
+
+
+    struct itimerval timer;
+    
+
+    signal(SIGALRM, sig_handler);
+
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_usec = 100000;
+
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 100000;
 
 
 
@@ -62,13 +95,31 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    /**
+     * Create two named semaphores
+     */
+    // first remove the semaphore if it already exists
+    if (sem_unlink(nameEmpty) == -1)
+            printf("Error removing %s: %s\n", nameEmpty, strerror(errno));
+    if (sem_unlink(nameFull) == -1)
+            printf("Error removing %s: %s\n", nameEmpty, strerror(errno));
 
+    // create and initialize the semaphore
+    if ( (empty_sem = sem_open(nameEmpty, O_CREAT, 0666, 1)) == SEM_FAILED)
+            printf("Error creating %s: %s\n", nameEmpty, strerror(errno));
+    if ( (full_sem = sem_open(nameFull, O_CREAT, 0666, 0)) == SEM_FAILED)
+            printf("Error creating %s: %s\n", nameFull, strerror(errno));
+
+
+
+    sem_close(empty_sem);
+    sem_close(full_sem);
 
     /* remove the mapped memory segment from the address space of the process */
     if (munmap(shm_base, SIZE) == -1) {
         printf("prod: Unmap failed: %s\n", strerror(errno));
         exit(1);
-  }
+    }
 
     /* close the shared memory segment as if it was a file */
     if (close(shm_fd) == -1) {
@@ -77,6 +128,4 @@ int main(int argc, char *argv[])
     }
 
     return 0;
-
-
 }
