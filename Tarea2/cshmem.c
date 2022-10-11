@@ -111,9 +111,26 @@ int main(int argc, char *argv[])
             printf("Error creating %s: %s\n", nameFull, strerror(errno));
 
 
+    //CONSUMIR DATOS
+
+    n = read(fd, buf, sizeof(buf));
+
+    setitimer(ITIMER_REAL, &timer, NULL);
+
+    do{
+        sum += (int)(buf[0]);
+        contador_bytes++;
+        if((int)(buf[0]) == 0)
+            break;
+       
+
+    } while (n = read(fd, buf, sizeof(buf)));
+
 
     sem_close(empty_sem);
-    sem_close(full_sem);
+    sem_unlink(nameEmpty);
+    sem_close(full_sem);  
+    sem_unlink(nameFull);
 
     /* remove the mapped memory segment from the address space of the process */
     if (munmap(shm_base, SIZE) == -1) {
@@ -124,6 +141,12 @@ int main(int argc, char *argv[])
     /* close the shared memory segment as if it was a file */
     if (close(shm_fd) == -1) {
         printf("prod: Close failed: %s\n", strerror(errno));
+        exit(1);
+    }
+
+    /* remove the shared memory segment from the file system */
+    if (shm_unlink(name) == -1) {
+        printf("cons: Error removing %s: %s\n", name, strerror(errno));
         exit(1);
     }
 
