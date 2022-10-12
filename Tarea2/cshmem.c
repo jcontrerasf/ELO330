@@ -12,16 +12,28 @@ memoria, envía a la salida estándar la suma de los valores y las tasas medidas
 todos los recursos del sistema (memoria y semáforos).cshmem usa prefix_name para crearrecursos de memoria
 compartida y semáforos necesarios para manejar el traspaso de datos.
 
-Compilar con: gcc -o cshmem cshmem.c -lrt
+Compilar con: gcc -o cshmem cshmem.c -lrt -pthread
 
 */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/shm.h>
 #include <sys/mman.h>
 #include <sys/stat.h>        /* For mode constants */
 #include <fcntl.h>           /* For O_* constants */
 #include <errno.h>
+#include <signal.h>
+#include <semaphore.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/time.h>
+
+int contador_bytes = 0;
+int contador_bytes_antiguo = 0;
+int contador_vueltas = 0;
+int *tasa_medida;
 
 void sig_handler(int signum){
     // Guardar tasa medida
@@ -35,11 +47,11 @@ void sig_handler(int signum){
 int main(int argc, char *argv[])
 {
     if(argc!=3) {
-        printf("Uso: cshmem <prefix_name> <N>\n");
+        printf("Uso: %s <prefix_name> <N>\n", argv[0]);
         exit(1);
     }
 
-    const int SIZE = 4096;      // file size
+    const int SIZE = 131072;  // file size 128*2^10 128k
     char *prefix = argv[1];
     int N = atoi(argv[2]);
 
@@ -76,6 +88,7 @@ int main(int argc, char *argv[])
     int shm_fd;       // file descriptor, from shm_open()
     char *shm_base;   // base address, from mmap()
     char *ptr;        // shm_base is fixed, ptr is movable
+    sem_t * empty_sem, *full_sem;
 
     /* create the shared memory segment as if it was a file */
     shm_fd = shm_open(name, O_CREAT | O_RDWR, 0666);
@@ -98,6 +111,7 @@ int main(int argc, char *argv[])
     /**
      * Create two named semaphores
      */
+
     // first remove the semaphore if it already exists
     if (sem_unlink(nameEmpty) == -1)
             printf("Error removing %s: %s\n", nameEmpty, strerror(errno));
@@ -113,7 +127,9 @@ int main(int argc, char *argv[])
 
     //CONSUMIR DATOS
 
-    n = read(fd, buf, sizeof(buf));
+    char buf[1];
+    int sum = 0;
+    int n = read(shm_fd, buf, sizeof(buf));
 
     setitimer(ITIMER_REAL, &timer, NULL);
 
@@ -124,7 +140,7 @@ int main(int argc, char *argv[])
             break;
        
 
-    } while (n = read(fd, buf, sizeof(buf)));
+    } while (n = read(shm_fd, buf, sizeof(buf)));
 
 
     sem_close(empty_sem);
