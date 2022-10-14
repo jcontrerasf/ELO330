@@ -12,8 +12,6 @@ memoria, envía a la salida estándar la suma de los valores y las tasas medidas
 todos los recursos del sistema (memoria y semáforos).cshmem usa prefix_name para crearrecursos de memoria
 compartida y semáforos necesarios para manejar el traspaso de datos.
 
-Compilar con: gcc -o cshmem cshmem.c -lrt -pthread
-
 */
 
 #include <stdio.h>
@@ -34,8 +32,18 @@ int contador_bytes = 0;
 int contador_bytes_antiguo = 0;
 int contador_vueltas = 0;
 int *tasa_medida;
+int done = 0;
 
-void sig_handler(int signum){
+// Funcion para medir ms
+long long current_timestamp() {
+    struct timeval te; 
+    gettimeofday(&te, NULL); // get current time
+    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+    // printf("milliseconds: %lld\n", milliseconds);
+    return milliseconds;
+}
+
+void timer_callback(){
     // Guardar tasa medida
     tasa_medida[contador_vueltas] = 10 * (contador_bytes - contador_bytes_antiguo); // guardo bytes por segundo
     // Reiniciar contador_bytes y sumarle uno a contador_vueltas
@@ -43,6 +51,8 @@ void sig_handler(int signum){
     contador_vueltas++;
 }
 
+int h, m;
+int *data;
 
 int main(int argc, char *argv[])
 {
@@ -51,11 +61,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    const int SIZE = 131072;  // file size 128*2^10 128k
+    const int SIZE = 2048; 
     char *prefix = argv[1];
     int N = atoi(argv[2]);
-
-    printf("prefijo: %s, N: %d\n", prefix, N);
 
     //Memoria compartida
     char name[100]; // file name
@@ -67,27 +75,11 @@ int main(int argc, char *argv[])
     // Nombre para los semaforos
     sprintf(nameEmpty, "/%s_EMPTY", prefix);
     sprintf(nameFull, "/%s_FULL", prefix);
-
     
     tasa_medida = (int *)malloc(10*N*sizeof(char));
 
-
-    struct itimerval timer;
-    
-
-    signal(SIGALRM, sig_handler);
-
-    timer.it_value.tv_sec = 0;
-    timer.it_value.tv_usec = 100000;
-
-    timer.it_interval.tv_sec = 0;
-    timer.it_interval.tv_usec = 100000;
-
-
-
     int shm_fd;       // file descriptor, from shm_open()
     char *shm_base;   // base address, from mmap()
-    char *ptr;        // shm_base is fixed, ptr is movable
     sem_t * empty_sem, *full_sem;
 
     /* create the shared memory segment as if it was a file */
@@ -101,22 +93,12 @@ int main(int argc, char *argv[])
     ftruncate(shm_fd, SIZE);
 
     /* map the shared memory segment to the address space of the process */
-    shm_base = mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    shm_base = mmap(0, SIZE, PROT_READ , MAP_SHARED, shm_fd, 0);
     if (shm_base == MAP_FAILED) {
         printf("prod: Map failed: %s\n", strerror(errno));
         // close and shm_unlink?
         exit(1);
     }
-
-    /**
-     * Create two named semaphores
-     */
-
-    // first remove the semaphore if it already exists
-    if (sem_unlink(nameEmpty) == -1)
-            printf("Error removing %s: %s\n", nameEmpty, strerror(errno));
-    if (sem_unlink(nameFull) == -1)
-            printf("Error removing %s: %s\n", nameEmpty, strerror(errno));
 
     // create and initialize the semaphore
     if ( (empty_sem = sem_open(nameEmpty, O_CREAT, 0666, 1)) == SEM_FAILED)
@@ -124,24 +106,62 @@ int main(int argc, char *argv[])
     if ( (full_sem = sem_open(nameFull, O_CREAT, 0666, 0)) == SEM_FAILED)
             printf("Error creating %s: %s\n", nameFull, strerror(errno));
 
-
-    //CONSUMIR DATOS
-
-    char buf[1];
     int sum = 0;
-    int n = read(shm_fd, buf, sizeof(buf));
+    int first_time = 0;
+    long long before_time;
+    long long diference_time;
 
-    setitimer(ITIMER_REAL, &timer, NULL);
+    data = (int *)shm_base;
+    h = 0;
 
-    do{
-        sum += (int)(buf[0]);
-        contador_bytes++;
-        if((int)(buf[0]) == 0)
-            break;
-       
+    while (!done) {
+        // posicionarse en primera posición de la zona compartida.
+        // espera por memoria compartida haya sido leída;
+        if (sem_wait(full_sem)!=0) 
+                printf("Error waiting %s\n",strerror(errno));
+        else {
+            if (!first_time)
+            {
+                before_time = current_timestamp();
+                first_time = 1;
+            }
+            diference_time = current_timestamp() - before_time;
+            if (diference_time> (100)) // Para captar la tasa cada 100ms
+            {    
+                timer_callback();
+                before_time = current_timestamp();
+            }
+            if (h >= (SIZE/(2*sizeof(int)))) // Comienza a leer desde el inicio, reutilizando el espacio de memoria
+            {
+                h = 0;
+            }
+            if ((int)(*data) == 0)
+            {
+                printf("%d\n", sum);
+                for (m = 0; m < contador_vueltas; m++)
+                {
+                    printf("%d %d\n", m+1, tasa_medida[m]);
+                }
+                done = 1;
+			    break;
+            }
+            // Lee el primer dato (el -1)
+            sum += (int)(*(data+sizeof(int)*h));
+            contador_bytes++;
+            h++; 
+            // Lee el segundo dato (el 1)
+            sum += (int)(*(data+sizeof(int)*h));
+            contador_bytes++;
+            h++;
 
-    } while (n = read(shm_fd, buf, sizeof(buf)));
+            // Avisa que la memoria compartida tiene datos nuevos;
+            if (sem_post(empty_sem)!=0)
+                printf("Error posting %s\n",strerror(errno));
 
+        }
+
+        
+    }
 
     sem_close(empty_sem);
     sem_unlink(nameEmpty);
