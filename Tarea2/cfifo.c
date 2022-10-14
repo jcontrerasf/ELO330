@@ -22,8 +22,8 @@ void sig_handler(int signum){
 
 int main(int argc, char *argv[]){
 
-    if(argc!=3){
-        perror("Numero incorrecto de argumentos de linea de comando");
+    if(argc!=3) {
+        printf("Uso: %s <prefix_name> <N>\n", argv[0]);
         exit(1);
     }
 
@@ -31,8 +31,8 @@ int main(int argc, char *argv[]){
     char *fifo_name = argv[1];
     int N = atoi(argv[2]);
 
-    printf("nombre de fifo es %s \n", fifo_name);
-    printf("N es %i \n", N);
+    //printf("nombre de fifo es %s \n", fifo_name);
+    //printf("N es %i \n", N);
 
     tasa_medida = (int *)malloc(10*N*sizeof(char));
 
@@ -94,10 +94,10 @@ int main(int argc, char *argv[]){
 
 
     // Imprimir suma total
-    printf("La suma total es : %i \n", sum);
+    printf("%i\n", sum);
     //Imprimir tasas
     for(i=0; i<10*N; i++)
-    printf("La tasa de bytes en el tramo %i es : %i [bytes/segundo] \n", i+1, tasa_medida[i]);
+    printf("%i %i\n", i+1, tasa_medida[i]);
 
     close(fd);
     exit(0);

@@ -12,16 +12,16 @@ void sig_handler(int signum){
 
 int main(int argc, char *argv[]){
 
-    if(argc!=3){
-        printf("Numero incorrecto de argumentos de linea de comando");    
+    if(argc!=3) {
+        printf("Uso: %s <prefix_name> <N>\n", argv[0]);
         exit(1);
     }
 
     char *fifo_name = argv[1];
     int N = atoi(argv[2]);
 
-    printf("nombre de fifo es %s \n", fifo_name);
-    printf("N es %i \n", N);
+    //printf("nombre de fifo es %s \n", fifo_name);
+    //printf("N es %i \n", N);
 
   
 
