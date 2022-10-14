@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     shm_base = mmap(0, SIZE, PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (shm_base == MAP_FAILED) {
         printf("cons: Map failed: %s\n", strerror(errno));
-        exit(1);   // Cleanup of shm_open was not done TODO??
+        exit(1);   // Cleanup of shm_open was not done
     }
 
     /**
