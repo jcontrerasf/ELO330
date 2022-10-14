@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) {
     int pipe_plot[2];
     int i, status;
     FILE * sd;
+    int fork_done = 0;
     //FILE * temp_fifo = tmpfile();
 
     if(argc!=3) {
@@ -66,11 +67,12 @@ int main(int argc, char *argv[]) {
     if ((pid_cfifo = fork()) < 0) {
         perror("fork");
         exit(1);
+    }else{
+        fork_done = 1;
     }
 
     if(pid_cfifo == 0){
-        
-
+        printf("inicio cfifo\n");
         //close(1); // close stdout
         dup2(fifo_out_fd, 1); // redirect stdout to file
 
@@ -80,13 +82,18 @@ int main(int argc, char *argv[]) {
         //dup2(pipe_exec[1], 1); // redirect stdout to write end
         //close(pipe_exec[0]); // close read end
     }
+    sleep(1);
 
-    if ((pid_pfifo = fork()) < 0) {
-        perror("fork");
-        exit(1);
+    if(fork_done && pid_cfifo!=0){
+        if ((pid_pfifo = fork()) < 0) {
+            perror("fork");
+            exit(1);
+        }
     }
 
+    
     if(pid_pfifo == 0){
+        printf("inicio pfifo\n");
         execvp("./pfifo", pfifo_args);
         perror("exec");
     }
@@ -115,7 +122,7 @@ int main(int argc, char *argv[]) {
     }
     
     fprintf(sd,"set ylabel \"Tasa de transmision [B/s]\"\nset xlabel\"Tiempo [ds]\"\nset title \"Comparacion de velocidad de transmision entre fifo y memoria compartida\"\n");
-    fprintf(sd, "plot \"%s\" every ::1 with lines lt 3 title \"fifo\"\n pause 10\n", fifo_filename);
+    fprintf(sd, "plot \"%s\" every ::1 with lines lt 3 title \"fifo\"\n pause 5\n", fifo_filename);
     fflush(sd);
     //fprintf(sd, "pause 100 \n"); fflush(sd);
  #if 0   

@@ -100,6 +100,7 @@ int main(int argc, char *argv[]){
     printf("%i %i\n", i+1, tasa_medida[i]);
 
     close(fd);
+    unlink(fifo_name);
     exit(0);
 
 
