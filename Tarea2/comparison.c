@@ -6,8 +6,8 @@
 #include <fcntl.h>
 #include <string.h>
 
-//#define FIFO_OUT_FILE "fifo_out.txt"
-//#define TEST_FILE "test.txt"
+//Descomentar la línea siguiente para guardar el gráfico resultante como archivo
+//#define EPS_FILE_OUTPUT
 
 
 int main(int argc, char *argv[]) {
@@ -173,6 +173,9 @@ int main(int argc, char *argv[]) {
     }
     
     fprintf(sd,"set ylabel \"Tasa de transmision [B/s]\"\nset xlabel\"Tiempo [ds]\"\nset title \"Comparacion de velocidad de transmision entre fifo y memoria compartida\"\n");
+    #ifdef EPS_FILE_OUTPUT
+    fprintf(sd,"set term eps\nset output \"comparacion_%s.eps\"\n", argv[1]);
+    #endif
     fprintf(sd, "plot \"%s\" every ::1 with lines lt 3 title \"fifo\", \"%s\" every ::1 with lines lt 1 title \"shmem\"\n pause 10\n", fifo_filename, shmem_filename);
     fflush(sd);
     /*
