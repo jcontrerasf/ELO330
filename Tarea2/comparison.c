@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     if(buf[0]=='0'){
         printf("El resultado de la suma fifo es 0\n");
     }else{
-        printf("El resultado es distinto de cero %s\n", buf);
+        printf("El resultado es distinto de cero, es %d\n", buf[0]);
     }
 
     buf[0] = 1;
@@ -169,29 +169,12 @@ int main(int argc, char *argv[]) {
     if(buf[0]=='0'){
         printf("El resultado de la suma shmem es 0\n");
     }else{
-        printf("El resultado es distinto de cero %s\n", buf);
+        printf("El resultado es distinto de cero, es %d\n", buf[0]);
     }
     
     fprintf(sd,"set ylabel \"Tasa de transmision [B/s]\"\nset xlabel\"Tiempo [ds]\"\nset title \"Comparacion de velocidad de transmision entre fifo y memoria compartida\"\n");
-    fprintf(sd, "plot \"%s\" every ::1 with lines lt 3 title \"fifo\", \"%s\" every ::1 with lines lt 1 title \"shmem\"\n pause 5\n", fifo_filename, shmem_filename);
+    fprintf(sd, "plot \"%s\" every ::1 with lines lt 3 title \"fifo\", \"%s\" every ::1 with lines lt 1 title \"shmem\"\n pause 10\n", fifo_filename, shmem_filename);
     fflush(sd);
-    //fprintf(sd, "pause 100 \n"); fflush(sd);
- #if 0   
-    fprintf(sd, " \"%s\" using ($2+%i):($1+%i) with lines lt 2\n", FIFO_OUT_FILE, 2, 3);
-/*    fprintf(sd, "pause -1 \n"); */ fflush(sd);
-/*    getchar();*/
-    sleep(5);
-
-    /*fprintf(sd, "\n"); fflush(sd);*/
-    fprintf(sd, "plot [0:30] [0:25] \"%s\" using ($1+%i):($2+%i) with lines  lt 1,", BARCO, 14, 17);
-    fprintf(sd, " \"%s\" using ($1+%i):($2+%i) with lines lt 2\n", BARCO, 3, 3);
-    fprintf(sd, "pause -1 \n"); fflush(sd);
-    sleep(5);
-    
-      /*  getchar();*/
-
-    fprintf(sd, "\n exit"); fflush(sd);
-    #endif
     /*
      * Close the pipe and wait for the child
      * to exit.

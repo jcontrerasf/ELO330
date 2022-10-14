@@ -45,7 +45,7 @@ long long current_timestamp() {
 
 void timer_callback(){
     // Guardar tasa medida
-    tasa_medida[contador_vueltas] = 10 * (contador_bytes - contador_bytes_antiguo); // guardo bytes por segundo
+    tasa_medida[contador_vueltas] = 10 * sizeof(int) * (contador_bytes - contador_bytes_antiguo); // guardo bytes por segundo
     // Reiniciar contador_bytes y sumarle uno a contador_vueltas
     contador_bytes_antiguo = contador_bytes;
     contador_vueltas++;
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     sprintf(nameEmpty, "/%s_EMPTY", prefix);
     sprintf(nameFull, "/%s_FULL", prefix);
     
-    tasa_medida = (int *)malloc(10*N*sizeof(char));
+    tasa_medida = (int *)malloc(10*N*sizeof(int));
 
     int shm_fd;       // file descriptor, from shm_open()
     char *shm_base;   // base address, from mmap()
