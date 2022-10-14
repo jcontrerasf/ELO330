@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 
-#define FIFO_OUT_FILE "fifo_out.txt"
-#define TEST_FILE "test.txt"
+//#define FIFO_OUT_FILE "fifo_out.txt"
+//#define TEST_FILE "test.txt"
 
 
 int main(int argc, char *argv[]) {
@@ -24,8 +25,11 @@ int main(int argc, char *argv[]) {
     char * const cfifo_args[] = { "cfifo", argv[1], argv[2] , NULL};
     char * const pfifo_args[] = { "pfifo", argv[1], argv[2] , NULL};
 
+    char fifo_filename[100]; // file name
+    sprintf(fifo_filename, "%s_fifo_out.txt", argv[1]);
 
-    int fifo_out_fd = open(TEST_FILE, O_RDWR | O_CREAT, 0666);
+
+    int fifo_out_fd = open(fifo_filename, O_RDWR | O_CREAT, 0666);
     
     /*
      * Create a pipe.
@@ -84,16 +88,34 @@ int main(int argc, char *argv[]) {
 
     if(pid_pfifo == 0){
         execvp("./pfifo", pfifo_args);
+        perror("exec");
     }
+
+
+    
+    waitpid(pid_cfifo, &status, 0);
+    waitpid(pid_pfifo, &status, 0);
 
     /*
      * We won't be reading from the pipe.
      */
     close(pipe_plot[0]);
     sd = fdopen(pipe_plot[1], "w");
+
+    FILE *fifo_file = fopen(fifo_filename, "r");
+    //FILE *fifo_file = fdopen(fifo_out_fd, "r");
+    char buf[10];
+    fgets(buf, 10, fifo_file);
+    strtok(buf, "\n");
+
+    if(buf[0]=='0'){
+        printf("El resultado de la suma es 0\n");
+    }else{
+        printf("hola %s\n", buf);
+    }
     
-    fprintf(sd,"set ylabel \"Tasa de transmisión [B/s]\"\nset xlabel\"Tiempo [ds]\"\nset title \"Comparacion de velocidad de transmision entre fifo y memoria compartida\"\n");
-    fprintf(sd, "plot \"%s\" with lines lt 3 title \"fifo\"\n pause 100\n", FIFO_OUT_FILE); //le quité la coma ,
+    fprintf(sd,"set ylabel \"Tasa de transmision [B/s]\"\nset xlabel\"Tiempo [ds]\"\nset title \"Comparacion de velocidad de transmision entre fifo y memoria compartida\"\n");
+    fprintf(sd, "plot \"%s\" every ::1 with lines lt 3 title \"fifo\"\n pause 10\n", fifo_filename);
     fflush(sd);
     //fprintf(sd, "pause 100 \n"); fflush(sd);
  #if 0   
@@ -118,8 +140,11 @@ int main(int argc, char *argv[]) {
      */
     fclose(sd);
     waitpid(pid_plot, &status, 0);
-    waitpid(pid_cfifo, &status, 0);
-    waitpid(pid_pfifo, &status, 0);
+    
+    
+    close(fifo_out_fd);
+    fclose(fifo_file);
+    unlink(fifo_filename);
 
     /*
      * Exit with a status of 0, indicating that
