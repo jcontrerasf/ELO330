@@ -19,16 +19,16 @@ int main(int argc, char *argv[])
     char buf[1024];
     int n;
 
-    if (argc != 3)
+    if (argc != 2)
     {
         printf("Numero incorrecto de argumentos de linea de comando");
         return 1;
     }
 
-    char *servidor = argv[1];
-    int puerto = atoi(argv[2]);
+    //char *servidor = argv[1];
+    int puerto = atoi(argv[1]);
 
-    printf("El servidor es: %s \n", servidor);
+    //printf("El servidor es: %s \n", servidor);
     printf("El puerto seleccionado es: %i \n", puerto);
 
 
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 	}
 
     // Segundo paso, ingresar servidor
-    server.sin_addr.s_addr = inet_addr(servidor);
+    server.sin_addr.s_addr = INADDR_ANY;
     server.sin_family = AF_INET;
 	server.sin_port = htons(puerto);
 

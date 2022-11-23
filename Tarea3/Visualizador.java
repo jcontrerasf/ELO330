@@ -30,7 +30,9 @@ public class Visualizador {
       for(;;) {
         //out.println("How are you all doing " + i);
         String str = in.readLine();
-        System.out.println(str);
+        if(str != null){
+          System.out.println(str);
+        }
       }
       //out.println("BYE");
     } finally {

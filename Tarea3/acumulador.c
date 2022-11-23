@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
                           (struct sockaddr*)&serverStorage_v,
                           &addr_size_v);
       
-      if (pthread_create(&visualizer_threads[i++], NULL, refreshData, &serverSocket_v) != 0)
+      if (pthread_create(&visualizer_threads[i++], NULL, refreshData, &newSocket_v) != 0)
         printf("Failed to create thread\n");
 
     }
@@ -220,7 +220,7 @@ void refreshData(void* param)
         printf("\nPoniendo al dia al Visualizador...\n"); 
         sprintf(buf, "a,%d,b,%d\n", A, B);
         printf(buf);
-        // send(psd, buf, sizeof(buf), 0);
+        send(psd, buf, sizeof(buf), 0);
         initFlag++;
       }else
       {
@@ -229,7 +229,7 @@ void refreshData(void* param)
           printf("\nActualizando info...\n"); 
           sprintf(buf, "a,%d,b,%d\n", A, B);
           printf(buf);
-          // send(psd, buf, sizeof(buf), 0);
+          send(psd, buf, sizeof(buf), 0);
           A_last = A;
           B_last = B;
         }
