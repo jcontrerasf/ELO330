@@ -1,11 +1,12 @@
 // Very simple client that just sends
 // lines to the server and reads lines
 // that the server sends.
-// $ java TCP_Client [server name]
+// Compilar con $ javac Visualizador.java
+// Ejecutar con $ java Visualizador [server name] [port]
 import java.net.*;
 import java.io.*;
 
-public class TCP_Client {
+public class Visualizador {
   public static void main(String[] args) throws IOException {
     // Passing null to getByName() produces the
     // special "Local Loopback" IP address, for
@@ -16,7 +17,7 @@ public class TCP_Client {
     // InetAddress addr = InetAddress.getByName("127.0.0.1");
     // InetAddress addr = InetAddress.getByName("localhost");
     System.out.println("addr = " + addr);
-    Socket socket = new Socket(addr, TCP_EchoServer.PORT);
+    Socket socket = new Socket(addr, Integer.parseInt(args[1]));
     // Guard everything in a try-finally to make
     // sure that the socket is closed:
     try {
@@ -24,14 +25,14 @@ public class TCP_Client {
       BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
       // Output is automatically flushed
       // by PrintWriter:
-      PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(
-                                                            socket.getOutputStream())),true);
-      for(int i = 0; i < 10; i ++) {
-        out.println("How are you all doing " + i);
+      //PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(
+      //                                                      socket.getOutputStream())),true);
+      for(;;) {
+        //out.println("How are you all doing " + i);
         String str = in.readLine();
         System.out.println(str);
       }
-      out.println("BYE");
+      //out.println("BYE");
     } finally {
       System.out.println("closing...");
       socket.close();
