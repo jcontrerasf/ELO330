@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
   hp = gethostbyname(hostname);
 
   serverSocket_t = socket(AF_INET, SOCK_STREAM, 0);
-  memcpy(&serverAddr_t.sin_addr, hp->h_addr_list[0], hp->h_length);
-  // serverAddr_t.sin_addr.s_addr = INADDR_ANY;
+  // memcpy(&serverAddr_t.sin_addr, hp->h_addr_list[0], hp->h_length);
+  serverAddr_t.sin_addr.s_addr = INADDR_ANY;
   serverAddr_t.sin_family = AF_INET;
 
   serverSocket_v = socket(AF_INET, SOCK_STREAM, 0);
