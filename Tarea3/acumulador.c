@@ -38,14 +38,17 @@ int B = 0;
 int A_last = 0;
 int B_last = 0;
 int max(int x, int y);
-void recieveVote(void* param);
-void refreshData(void* param);
+void *recieveVote(void* param);
+void *refreshData(void* param);
+pthread_mutex_t lock;
 
 
 int main(int argc, char *argv[])
 {
   fd_set rset;
   // Initialize variables
+  char hostname[64];
+  struct hostent *hp;
   int serverSocket_t, newSocket_t;
   struct sockaddr_in serverAddr_t;
   struct sockaddr_storage serverStorage_t;
@@ -57,13 +60,18 @@ int main(int argc, char *argv[])
   socklen_t addr_size_t, addr_size_v;
   sem_init(&x, 0, 1);
   sem_init(&y, 0, 1);
+  gethostname(hostname, sizeof(hostname));
+  // strcpy(hostname, "localhost");
+  hp = gethostbyname(hostname);
 
   serverSocket_t = socket(AF_INET, SOCK_STREAM, 0);
+  // memcpy(&serverAddr_t.sin_addr, hp->h_addr_list[0], hp->h_length);
   serverAddr_t.sin_addr.s_addr = INADDR_ANY;
   serverAddr_t.sin_family = AF_INET;
 
   serverSocket_v = socket(AF_INET, SOCK_STREAM, 0);
-  serverAddr_v.sin_addr.s_addr = INADDR_ANY;
+  memcpy(&serverAddr_v.sin_addr, hp->h_addr_list[0], hp->h_length);
+  // serverAddr_v.sin_addr.s_addr = INADDR_ANY;
   serverAddr_v.sin_family = AF_INET;
   if (argc == 2){
     serverAddr_t.sin_port = htons(atoi(argv[1]));
@@ -103,6 +111,13 @@ int main(int argc, char *argv[])
   int maxfdp1, tellerfd, visualizerfd, nready;
 
   maxfdp1 = max(serverSocket_t, serverSocket_v) + 1;
+
+   if (pthread_mutex_init(&lock, NULL) != 0) {
+        printf("\n mutex init has failed\n");
+        return 1;
+    }
+  
+
   for (;;) {
 
     FD_SET(serverSocket_t, &rset);
@@ -156,7 +171,7 @@ int main(int argc, char *argv[])
       i = 0;
     }
   }
-
+  pthread_mutex_destroy(&lock);
   return 0;
 
 }
@@ -169,7 +184,7 @@ int max(int x, int y)
         return y;
 }
 
-void recieveVote(void* param)
+void *recieveVote(void* param)
 {
     int psd =  *((int *) param);
     char buf[MAX_BUFF_SIZE];
@@ -184,6 +199,7 @@ void recieveVote(void* param)
         if (rc > 0)
         {
             // Se imprime lo que se recibe : SECCION EN LA QUE SUMAMOS VOTOS
+            pthread_mutex_lock(&lock);
             buf[rc] = '\0';
             if (strncmp(buf, "a", 1) == 0)
             {
@@ -196,6 +212,7 @@ void recieveVote(void* param)
                 B = B+1;
                 printf("Se recibe voto para B, total : %i", B);
             }
+            pthread_mutex_unlock(&lock);
         }
         else
         {
@@ -206,7 +223,7 @@ void recieveVote(void* param)
 }
 
 
-void refreshData(void* param)
+void *refreshData(void* param)
 {
     int psd =  *((int *) param);
     char buf[MAX_BUFF_SIZE];
@@ -240,48 +257,3 @@ void refreshData(void* param)
         
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
