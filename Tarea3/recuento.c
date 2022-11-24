@@ -12,6 +12,8 @@
 
 int main(int argc, char *argv[])
 {
+    struct hostent *hp, *gethostbyname();
+    struct sockaddr_in addr;
 
     int socket_desc;
     struct sockaddr_in server;
@@ -19,16 +21,16 @@ int main(int argc, char *argv[])
     char buf[1024];
     int n;
 
-    if (argc != 2)
+    if (argc != 3)
     {
         printf("Numero incorrecto de argumentos de linea de comando");
         return 1;
     }
 
-    //char *servidor = argv[1];
-    int puerto = atoi(argv[1]);
+    char *servidor = argv[1];
+    int puerto = atoi(argv[2]);
 
-    //printf("El servidor es: %s \n", servidor);
+    printf("El servidor es: %s \n", servidor);
     printf("El puerto seleccionado es: %i \n", puerto);
 
 
@@ -41,8 +43,18 @@ int main(int argc, char *argv[])
 	}
 
     // Segundo paso, ingresar servidor
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_family = AF_INET;
+
+    if  ( (hp = gethostbyname(argv[1])) == NULL ) {
+        addr.sin_addr.s_addr = inet_addr(argv[1]);
+        if ((hp = gethostbyaddr((void *)&addr.sin_addr.s_addr,
+            sizeof(addr.sin_addr.s_addr),AF_INET)) == NULL) {
+            fprintf(stderr, "Can't find host %s\n", argv[1]);
+            exit(-1);
+        }
+    }
+
+    //server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_family = hp->h_addrtype;
 	server.sin_port = htons(puerto);
 
     // Tercer paso, conectar socket a servidor
