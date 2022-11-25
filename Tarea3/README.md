@@ -34,7 +34,7 @@ Luego, ejecutar `recuento` y `Visualizador`, respectivamente con
 java Visualizador <direccion_ip> <puerto + 1>
 ```
 
-#Ejemplo
+# Ejemplo
 
 Corriendo los tres procesos en Aragorn, con el servidor en el puerto 47200
 
