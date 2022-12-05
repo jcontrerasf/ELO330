@@ -10,7 +10,10 @@ javac --module-path path\to\javafx-sdk-18.0.1\lib --add-modules javafx.controls 
 ```
 donde `path\to\javafx-sdk\lib` corresponde a la ruta hasta la carpeta lib de Java FX, ejemplo: `C:\Users\julio\javaFX\javafx-sdk-18.0.1\lib`
 
-
+### BJServer.c
+```
+gcc BJServer.c -o BJServer -lpthread
+```
 # Ejecución
 
 Para ejecutar el cliente, usar:
@@ -18,4 +21,7 @@ Para ejecutar el cliente, usar:
 ```
 java --module-path path\to\javafx-sdk\lib --add-modules javafx.controls BJClient
 ```
-
+Para ejecutar el servidor, usar:
+```
+./BJServer <puerto>
+```
