@@ -32,6 +32,8 @@
 #define MAX_THREADS 20
 #define MAX_BUFF_SIZE 256
 
+#define ARCHIVO "/WWW/resultados.html"
+
 sem_t x, y;
 pthread_t tid;
 pthread_t teller_threads[MAX_THREADS];
@@ -47,6 +49,7 @@ int sumarCartas(int *mano, int Top, int CartaInicial);
 void shuffle(int *array, size_t n);
 void Push(int *Top, int Size, int *inp_array, int x);
 int Pop(int *Top, int *inp_array);
+void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU);
 
 
 pthread_mutex_t lock;
@@ -298,13 +301,7 @@ void *gameClient(void *param)
         printf("Se envia el puntaje que obtuvo el dealer \n");
 
 
-        // CODIGO JULIO
-        
-
-
-
-
-
+        resultadosHTML("Nombre Jugador", sumarCartas(manoCliente, TopManoCliente, 0), sumarCartas(manoServidor, TopManoServidor, 0));
 
 
         // Cambiar estado a Standby
@@ -427,6 +424,70 @@ int Pop(int *Top, int *inp_array)
 
 
 
+
+void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU){
+
+   char fp_buff[256]; //file path buffer
+   FILE *file;
+   int archivo_existe = 0;
+   char* ganador;
+   time_t t = time(NULL);
+   struct tm tm = *localtime(&t);
+
+   strcat(strcpy(fp_buff, getenv("HOME")), ARCHIVO);
+
+   if ((file = fopen(fp_buff, "r")))
+   {
+      archivo_existe = 1;
+      fclose(file);
+   }
+
+   file = fopen(fp_buff, "a");
+
+   if(!archivo_existe){
+      fprintf(file,
+                  "<title>Resultados Black Jack</title>\r\n"
+                  "<header>\r\n"
+                  "   <h1>Resultados Black Jack</h1>\r\n"
+                  "   <p>Proyecto final ELO330</p>\r\n"
+                  "</header>\r\n");
+   }
+
+   if (puntajeJugador > puntajeCPU)
+   {
+      ganador = jugador;
+   }else{
+      ganador = "CPU";
+   }
+
+   
+   fprintf(file,
+               "<div>\r\n"
+               "  <h3>Resultados del juego del %02d/%02d/%d a las %02d:%02d</h3>\r\n"
+               "  <p>Ganador: %s</p>\r\n"
+               "  <table class='resultado'>\r\n"
+               "    <thead>\r\n"
+               "      <tr>\r\n"
+               "        <th>Jugador</th>\r\n"
+               "        <th>Puntaje</th>\r\n"
+               "      </tr>\r\n"
+               "    </thead>\r\n"
+               "    <tbody>\r\n"
+               "      <tr>\r\n"
+               "        <td>%s</td>\r\n"
+               "        <td>%d</td>\r\n"
+               "      </tr>\r\n"
+               "      <tr>\r\n"
+               "        <td>CPU</td>\r\n"
+               "        <td>%d</td>\r\n"
+               "      </tr>\r\n"
+               "    <tbody>\r\n"
+               "  </table>\r\n"
+               "</div>\r\n"
+      , tm.tm_mday, tm.tm_mon+1, tm.tm_year+1900, tm.tm_hour, tm.tm_min, ganador, jugador, puntajeJugador, puntajeCPU);
+   
+   fclose(file);
+}
 
 
 
