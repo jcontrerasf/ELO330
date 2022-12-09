@@ -470,11 +470,11 @@ void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU){
                   "</header>\r\n");
    }
 
-   if (puntajeJugador > puntajeCPU)
+   if ((puntajeJugador > 21) || ((puntajeCPU >= puntajeJugador) && (puntajeCPU <=21)))
    {
-      ganador = jugador;
-   }else{
       ganador = "CPU";
+   }else{
+      ganador = jugador;
    }
 
    
