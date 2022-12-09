@@ -199,6 +199,23 @@ void *gameClient(void *param)
   char buf_send[MAX_BUFF_SIZE];
   int rc;
   int j = 0;
+  char *nombre;
+
+
+  printf("\n...server is waiting for name...\n"); // el codigo no funciona sin este printf
+  if ((rc = read(psd, buf, sizeof(buf))) < 0)
+    perror("receiving stream  message");
+  if (rc > 0) // MENSAJE RECIBIDO DESDE EL CLIENTE
+  {
+    buf[rc] = '\0';
+    strcpy(nombre, buf);
+  }
+  else
+  {
+    printf("Disconnected..\n");
+    pthread_exit(NULL);
+  }
+
   /*      get data from  clients and send it back */
   for (;;)
   {
@@ -220,17 +237,13 @@ void *gameClient(void *param)
         // repartir 2 al jugador
         Push(&TopManoCliente, 12, manoCliente, Pop(&Top, mazo));
         printf("Jugador recibe la carta : %d \n", manoCliente[TopManoCliente]);
-        sprintf(buf_send, "%d\n", manoCliente[TopManoCliente]);
+        sprintf(buf_send, "%d\0", manoCliente[TopManoCliente]);
         send(psd, buf_send, sizeof(buf_send), 0);
-        for(j = 0; j < SIZE_MAX; j++)
-          buf_send[j] = NULL;
 
         Push(&TopManoCliente, 12, manoCliente, Pop(&Top, mazo));
         printf("Jugador recibe la carta : %d \n", manoCliente[TopManoCliente]);
-        sprintf(buf_send, "%d\n", manoCliente[TopManoCliente]);
+        sprintf(buf_send, "%d\0", manoCliente[TopManoCliente]);
         send(psd, buf_send, sizeof(buf_send), 0);
-        for(j = 0; j < SIZE_MAX; j++)
-          buf_send[j] = NULL;
         // repartir 2 al servidor
 
         Push(&TopManoServidor, 12, manoServidor, Pop(&Top, mazo));
@@ -251,20 +264,16 @@ void *gameClient(void *param)
         {
           // Enviar una N
           printf("El jugador ya no puede pedir mas cartas \n");
-          sprintf(buf_send, "N\n");
+          sprintf(buf_send, "N\0");
           send(psd, buf_send, sizeof(buf_send), 0);
-          for(j = 0; j < SIZE_MAX; j++)
-            buf_send[j] = NULL;
         }
         else
         {
           Push(&TopManoCliente, 12, manoCliente, Pop(&Top, mazo));
           printf("Jugador pidio y recibe la carta : %d \n", manoCliente[TopManoCliente]);
 
-          sprintf(buf_send, "%d\n", manoCliente[TopManoCliente]);
+          sprintf(buf_send, "%d\0", manoCliente[TopManoCliente]);
           send(psd, buf_send, sizeof(buf_send), 0);
-          for(j = 0; j < SIZE_MAX; j++)
-            buf_send[j] = NULL;
         }
       }
 
@@ -284,36 +293,28 @@ void *gameClient(void *param)
         if (sumarCartas(manoCliente, TopManoCliente, 0) > 21)
         {
           // Enviar "L"
-          sprintf(buf_send, "L\n");
+          sprintf(buf_send, "L\0");
           send(psd, buf_send, sizeof(buf_send), 0);
-          for(j = 0; j < SIZE_MAX; j++)
-            buf_send[j] = NULL;
           printf("El jugador supero 21  \n");
         }
         else if (sumarCartas(manoServidor, TopManoServidor, 0) >= sumarCartas(manoCliente, TopManoCliente, 0) && sumarCartas(manoServidor, TopManoServidor, 0) <=21) //REFERENCIATE ACA JULIO, PUNTAJE DE SERVER Y CLIENTE
         {
           // Enviar "L"
-          sprintf(buf_send, "L\n");
+          sprintf(buf_send, "L\0");
           send(psd, buf_send, sizeof(buf_send), 0);
-          for(j = 0; j < SIZE_MAX; j++)
-            buf_send[j] = NULL;
           printf("El jugador no supero al dealer\n");
         }
         else
         {
           // Enviar "W"
-          sprintf(buf_send, "W\n");
+          sprintf(buf_send, "W\0");
           send(psd, buf_send, sizeof(buf_send), 0);
-          for(j = 0; j < SIZE_MAX; j++)
-            buf_send[j] = NULL;
           printf("El jugador gano\n");
         }
 
         // Retornar el puntaje que recibio el servidor
-        sprintf(buf_send, "%d\n", sumarCartas(manoServidor, TopManoServidor, 0));
+        sprintf(buf_send, "%d\0", sumarCartas(manoServidor, TopManoServidor, 0));
         send(psd, buf_send, sizeof(buf_send), 0);
-        for(j = 0; j < SIZE_MAX; j++)
-            buf_send[j] = NULL;
         printf("Se envia el puntaje que obtuvo el dealer \n");
 
 
