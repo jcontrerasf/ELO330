@@ -290,7 +290,7 @@ void *gameClient(void *param)
             buf_send[j] = NULL;
           printf("El jugador supero 21  \n");
         }
-        else if (sumarCartas(manoServidor, TopManoServidor, 0) >= sumarCartas(manoCliente, TopManoCliente, 0)) //REFERENCIATE ACA JULIO, PUNTAJE DE SERVER Y CLIENTE
+        else if (sumarCartas(manoServidor, TopManoServidor, 0) >= sumarCartas(manoCliente, TopManoCliente, 0) && sumarCartas(manoServidor, TopManoServidor, 0) <=21) //REFERENCIATE ACA JULIO, PUNTAJE DE SERVER Y CLIENTE
         {
           // Enviar "L"
           sprintf(buf_send, "L\n");
