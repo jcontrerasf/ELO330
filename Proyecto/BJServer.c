@@ -34,6 +34,8 @@
 
 #define ARCHIVO "/WWW/resultados.html"
 
+srand(time(NULL));
+
 sem_t x, y;
 pthread_t tid;
 pthread_t teller_threads[MAX_THREADS];
@@ -108,7 +110,7 @@ int main(int argc, char *argv[])
   int i = 0;
   int maxfdp1, tellerfd, visualizerfd, nready;
 
-  //maxfdp1 = max(serverSocket_t, serverSocket_v) + 1;
+
   maxfdp1 = serverSocket_t + 1;
 
   if (pthread_mutex_init(&lock, NULL) != 0)
@@ -159,15 +161,6 @@ int main(int argc, char *argv[])
   pthread_mutex_destroy(&lock);
   return 0;
 }
-
-int max(int x, int y)
-{
-  if (x > y)
-    return x;
-  else
-    return y;
-}
-
 
 
 
