@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
   // with 40 max connection
   // requests queued
   if (listen(serverSocket_t, 50) == 0)
-    printf("Listening Tellers\n");
+    printf("Listening players\n");
   else
     printf("Error\n");
 
@@ -143,17 +143,6 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-int max(int x, int y)
-{
-  if (x > y)
-    return x;
-  else
-    return y;
-}
-
-
-
-
 
 
 enum Estado
@@ -181,15 +170,15 @@ void *gameClient(void *param)
   int i, status;
   FILE * pipe_fd;
   FILE *result_tempfile;
-  unsigned long id_partida = time(NULL);
+  unsigned long id_partida;// = time(NULL);
 
   char result_tempname[100]; // file name
-  sprintf(result_tempname, "%lu_result.txt", id_partida);
+  //sprintf(result_tempname, "%lu_result.txt", id_partida);
 
   char home_path[256];
   strcpy(home_path, getenv("HOME"));
 
-  result_tempfile = fopen(result_tempname, "w");
+  //result_tempfile = fopen(result_tempname, "w");
 
   // variables para obtener el mensaje
   int psd = *((int *)param);
@@ -226,6 +215,10 @@ void *gameClient(void *param)
       // SI EL JUGADOR PIDE INICIAR EL JUEGO
       if ((strncmp(buf, "I", 1) == 0) && estado == Standby)
       {
+        id_partida = time(NULL);
+        sprintf(result_tempname, "%lu_result.txt", id_partida);
+        result_tempfile = fopen(result_tempname, "w");
+
         // generar mazo de 52 cartas
         generarMazo(mazo);
         Top = 51; 
@@ -319,9 +312,7 @@ void *gameClient(void *param)
         send(psd, buf_send, sizeof(buf_send), 0);
         printf("Se envia el puntaje que obtuvo el dealer \n");
 
-        printf("antes fclose\n");
         fclose(result_tempfile);
-        printf("despues fclose\n");
 
         sleep(1);
 
@@ -364,9 +355,9 @@ void *gameClient(void *param)
         pipe_fd = fdopen(pipe_plot[1], "w");
 
         
-        fprintf(pipe_fd,"set ylabel \"Puntuación\"\nset xlabel\"Turnos\"\nset title \"Puntuación durante la partida\"\n");
-        fprintf(pipe_fd,"set term png\nset output \"%s/WWW/resultado_%lu.png\"\n", home_path, id_partida);
-        fprintf(pipe_fd, "plot \"%s\" pt 7 ps 5 title \"%s\"\nexit\n", result_tempname, nombre);
+        fprintf(pipe_fd,"set ylabel \"Puntuación\"\nset xlabel\"Turnos\"\nset title \"Cartas recibidas\"\n");
+        fprintf(pipe_fd,"set term png size 320,240\nset output \"%s/WWW/resultado_%lu.png\"\n", home_path, id_partida);
+        fprintf(pipe_fd, "plot \"%s\" with linespoints ps 3 pt 7 title \"%s\"\n exit\n", result_tempname, nombre);
         fflush(pipe_fd);
         /*
          * Close the pipe and wait for the child
@@ -522,6 +513,7 @@ void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU, unsigned 
    if(!archivo_existe){
       fprintf(file,
                   "<title>Resultados Black Jack</title>\r\n"
+                  "<style>body{padding: 0 20%;} img{float: right;}div{border-top: 2px solid; overflow: hidden;}</style>\r\n"
                   "<header>\r\n"
                   "   <h1>Resultados Black Jack</h1>\r\n"
                   "   <p>Proyecto final ELO330</p>\r\n"
@@ -538,6 +530,7 @@ void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU, unsigned 
    
    fprintf(file,
                "<div>\r\n"
+               "<img src='resultado_%lu.png'>\r\n"
                "  <h3>Resultados del juego del %02d/%02d/%d a las %02d:%02d</h3>\r\n"
                "  <p>Ganador: %s</p>\r\n"
                "  <table class='resultado'>\r\n"
@@ -558,9 +551,8 @@ void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU, unsigned 
                "      </tr>\r\n"
                "    <tbody>\r\n"
                "  </table>\r\n"
-               "<img src='resultado_%lu.png'>\r\n"
                "</div>\r\n"
-      , tm.tm_mday, tm.tm_mon+1, tm.tm_year+1900, tm.tm_hour, tm.tm_min, ganador, jugador, puntajeJugador, puntajeCPU, id_partida);
+      ,id_partida, tm.tm_mday, tm.tm_mon+1, tm.tm_year+1900, tm.tm_hour, tm.tm_min, ganador, jugador, puntajeJugador, puntajeCPU);
    
    fclose(file);
 }
