@@ -1,8 +1,3 @@
-// se cambio maxfdp1 = max(serverSocket_t, serverSocket_v) + 1
-// maxfdp1 = serverSocket_t + 1
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,8 +29,6 @@
 
 #define ARCHIVO "/WWW/resultados.html"
 
-srand(time(NULL));
-
 sem_t x, y;
 pthread_t tid;
 pthread_t teller_threads[MAX_THREADS];
@@ -51,13 +44,16 @@ int sumarCartas(int *mano, int Top, int CartaInicial);
 void shuffle(int *array, size_t n);
 void Push(int *Top, int Size, int *inp_array, int x);
 int Pop(int *Top, int *inp_array);
-void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU);
+void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU, unsigned long id_partida);
 
-
-pthread_mutex_t lock;
 
 int main(int argc, char *argv[])
 {
+  if(argc!=2) {
+      printf("Uso: %s <puerto>\n", argv[0]);
+      exit(1);
+  }
+  srand(time(NULL));
   fd_set rset;
   // Initialize variables
   char hostname[64];
@@ -79,15 +75,8 @@ int main(int argc, char *argv[])
   serverAddr_t.sin_family = AF_INET;
 
 
+  serverAddr_t.sin_port = htons(atoi(argv[1]));
 
-  if (argc == 2)
-  {
-    serverAddr_t.sin_port = htons(atoi(argv[1]));
-  }
-  else
-  {
-    serverAddr_t.sin_port = htons(0);
-  }
 
   // Bind the socket to the
   // address and port number.
@@ -110,14 +99,7 @@ int main(int argc, char *argv[])
   int i = 0;
   int maxfdp1, tellerfd, visualizerfd, nready;
 
-
   maxfdp1 = serverSocket_t + 1;
-
-  if (pthread_mutex_init(&lock, NULL) != 0)
-  {
-    printf("\n mutex init has failed\n");
-    return 1;
-  }
 
   for (;;)
   {
@@ -158,9 +140,17 @@ int main(int argc, char *argv[])
       i = 0;
     }
   }
-  pthread_mutex_destroy(&lock);
   return 0;
 }
+
+int max(int x, int y)
+{
+  if (x > y)
+    return x;
+  else
+    return y;
+}
+
 
 
 
@@ -186,21 +176,36 @@ void *gameClient(void *param)
   enum Estado estado;
   estado = Standby;
 
+  pid_t pid_plot;
+  int pipe_plot[2];
+  int i, status;
+  FILE * pipe_fd;
+  FILE *result_tempfile;
+  unsigned long id_partida = time(NULL);
+
+  char result_tempname[100]; // file name
+  sprintf(result_tempname, "%lu_result.txt", id_partida);
+
+  char home_path[256];
+  strcpy(home_path, getenv("HOME"));
+
+  result_tempfile = fopen(result_tempname, "w");
+
   // variables para obtener el mensaje
   int psd = *((int *)param);
   char buf[MAX_BUFF_SIZE];
   char buf_send[MAX_BUFF_SIZE];
   int rc;
-  int j = 0;
-  char *nombre;
-
-
+  char nombre[40];
+   
+  
   printf("\n...server is waiting for name...\n"); // el codigo no funciona sin este printf
   if ((rc = read(psd, buf, sizeof(buf))) < 0)
     perror("receiving stream  message");
   if (rc > 0) // MENSAJE RECIBIDO DESDE EL CLIENTE
   {
     buf[rc] = '\0';
+    printf(buf);
     strcpy(nombre, buf);
   }
   else
@@ -208,7 +213,6 @@ void *gameClient(void *param)
     printf("Disconnected..\n");
     pthread_exit(NULL);
   }
-
   /*      get data from  clients and send it back */
   for (;;)
   {
@@ -230,13 +234,17 @@ void *gameClient(void *param)
         // repartir 2 al jugador
         Push(&TopManoCliente, 12, manoCliente, Pop(&Top, mazo));
         printf("Jugador recibe la carta : %d \n", manoCliente[TopManoCliente]);
-        sprintf(buf_send, "%d\0", manoCliente[TopManoCliente]);
+        sprintf(buf_send, "%d\n", manoCliente[TopManoCliente]);
         send(psd, buf_send, sizeof(buf_send), 0);
+        fprintf(result_tempfile, "%d\n", manoCliente[TopManoCliente]);
+      
 
         Push(&TopManoCliente, 12, manoCliente, Pop(&Top, mazo));
         printf("Jugador recibe la carta : %d \n", manoCliente[TopManoCliente]);
-        sprintf(buf_send, "%d\0", manoCliente[TopManoCliente]);
+        sprintf(buf_send, "%d\n", manoCliente[TopManoCliente]);
         send(psd, buf_send, sizeof(buf_send), 0);
+        fprintf(result_tempfile, "%d\n", manoCliente[TopManoCliente]);
+
         // repartir 2 al servidor
 
         Push(&TopManoServidor, 12, manoServidor, Pop(&Top, mazo));
@@ -257,7 +265,7 @@ void *gameClient(void *param)
         {
           // Enviar una N
           printf("El jugador ya no puede pedir mas cartas \n");
-          sprintf(buf_send, "N\0");
+          sprintf(buf_send, "N\n");
           send(psd, buf_send, sizeof(buf_send), 0);
         }
         else
@@ -265,8 +273,9 @@ void *gameClient(void *param)
           Push(&TopManoCliente, 12, manoCliente, Pop(&Top, mazo));
           printf("Jugador pidio y recibe la carta : %d \n", manoCliente[TopManoCliente]);
 
-          sprintf(buf_send, "%d\0", manoCliente[TopManoCliente]);
+          sprintf(buf_send, "%d\n", manoCliente[TopManoCliente]);
           send(psd, buf_send, sizeof(buf_send), 0);
+          fprintf(result_tempfile, "%d\n", manoCliente[TopManoCliente]);
         }
       }
 
@@ -286,33 +295,89 @@ void *gameClient(void *param)
         if (sumarCartas(manoCliente, TopManoCliente, 0) > 21)
         {
           // Enviar "L"
-          sprintf(buf_send, "L\0");
+          sprintf(buf_send, "L\n");
           send(psd, buf_send, sizeof(buf_send), 0);
           printf("El jugador supero 21  \n");
         }
-        else if (sumarCartas(manoServidor, TopManoServidor, 0) >= sumarCartas(manoCliente, TopManoCliente, 0) && sumarCartas(manoServidor, TopManoServidor, 0) <=21) //REFERENCIATE ACA JULIO, PUNTAJE DE SERVER Y CLIENTE
+        else if (sumarCartas(manoServidor, TopManoServidor, 0) >= sumarCartas(manoCliente, TopManoCliente, 0) && sumarCartas(manoServidor, TopManoServidor, 0) <=21)
         {
           // Enviar "L"
-          sprintf(buf_send, "L\0");
+          sprintf(buf_send, "L\n");
           send(psd, buf_send, sizeof(buf_send), 0);
           printf("El jugador no supero al dealer\n");
         }
         else
         {
           // Enviar "W"
-          sprintf(buf_send, "W\0");
+          sprintf(buf_send, "W\n");
           send(psd, buf_send, sizeof(buf_send), 0);
           printf("El jugador gano\n");
         }
 
         // Retornar el puntaje que recibio el servidor
-        sprintf(buf_send, "%d\0", sumarCartas(manoServidor, TopManoServidor, 0));
+        sprintf(buf_send, "%d\n", sumarCartas(manoServidor, TopManoServidor, 0));
         send(psd, buf_send, sizeof(buf_send), 0);
         printf("Se envia el puntaje que obtuvo el dealer \n");
 
+        printf("antes fclose\n");
+        fclose(result_tempfile);
+        printf("despues fclose\n");
 
-        resultadosHTML("Nombre Jugador", sumarCartas(manoCliente, TopManoCliente, 0), sumarCartas(manoServidor, TopManoServidor, 0));
+        sleep(1);
 
+        /*
+         * Create a pipe.
+         */
+        if (pipe(pipe_plot) < 0) {
+            perror("pipe");
+            exit(1);
+        }
+
+        /*
+         * Create a child process.
+         */
+        if ((pid_plot = fork()) < 0) {
+            perror("fork");
+            exit(1);
+        }
+
+        /*
+         * The child process executes "gnuplot".
+         */
+        if (pid_plot == 0) {
+            /*
+             * Attach standard input of this child process to read from the pipe.
+             */
+            dup2(pipe_plot[0], 0);
+            close(pipe_plot[1]);  /* close the write end off the pipe */
+
+            execlp("gnuplot", "gnuplot", NULL);
+            perror("exec");
+            _exit(127);
+        }
+       
+
+        /*
+         * We won't be reading from the pipe.
+         */
+        close(pipe_plot[0]);
+        pipe_fd = fdopen(pipe_plot[1], "w");
+
+        
+        fprintf(pipe_fd,"set ylabel \"Puntuación\"\nset xlabel\"Turnos\"\nset title \"Puntuación durante la partida\"\n");
+        fprintf(pipe_fd,"set term png\nset output \"%s/WWW/resultado_%lu.png\"\n", home_path, id_partida);
+        fprintf(pipe_fd, "plot \"%s\" pt 7 ps 5 title \"%s\"\nexit\n", result_tempname, nombre);
+        fflush(pipe_fd);
+        /*
+         * Close the pipe and wait for the child
+         * to exit.
+         */
+        fclose(pipe_fd);
+        waitpid(pid_plot, &status, 0);
+
+        resultadosHTML(nombre, sumarCartas(manoCliente, TopManoCliente, 0), sumarCartas(manoServidor, TopManoServidor, 0), id_partida);
+
+        unlink(result_tempname);
 
         // Cambiar estado a Standby
         estado = Standby;
@@ -435,7 +500,7 @@ int Pop(int *Top, int *inp_array)
 
 
 
-void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU){
+void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU, unsigned long id_partida){
 
    char fp_buff[256]; //file path buffer
    FILE *file;
@@ -493,8 +558,9 @@ void resultadosHTML(char* jugador, int puntajeJugador, int puntajeCPU){
                "      </tr>\r\n"
                "    <tbody>\r\n"
                "  </table>\r\n"
+               "<img src='resultado_%lu.png'>\r\n"
                "</div>\r\n"
-      , tm.tm_mday, tm.tm_mon+1, tm.tm_year+1900, tm.tm_hour, tm.tm_min, ganador, jugador, puntajeJugador, puntajeCPU);
+      , tm.tm_mday, tm.tm_mon+1, tm.tm_year+1900, tm.tm_hour, tm.tm_min, ganador, jugador, puntajeJugador, puntajeCPU, id_partida);
    
    fclose(file);
 }
